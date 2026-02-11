@@ -50,7 +50,7 @@ To install **Arch Maintenance Hub** on your system, execute the following comman
 
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/adamzakys/arch-cleaner.git](https://github.com/adamzakys/arch-cleaner.git)
+git clone https://github.com/adamzakys/arch-cleaner.git
 
 # 2. Navigate to the directory
 cd arch-cleaner
