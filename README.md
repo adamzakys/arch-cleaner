@@ -17,12 +17,12 @@ Built with **Bash** and **Gum**.
 Buka terminal, lalu jalankan perintah ini:
 
 ```bash
-# 1. Clone repository
-git clone [https://github.com/USERNAME-GITHUB-KAMU/arch-cleaner.git](https://github.com/USERNAME-GITHUB-KAMU/arch-cleaner.git)
+# 1. Clone repository ini
+git clone [https://github.com/adamzakys/arch-cleaner.git](https://github.com/adamzakys/arch-cleaner.git)
 
-# 2. Masuk ke folder
+# 2. Masuk ke folder project
 cd arch-cleaner
 
-# 3. Jalankan Installer
+# 3. Jalankan installer
 chmod +x install.sh
 ./install.sh
