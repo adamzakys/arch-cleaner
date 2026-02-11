@@ -2,10 +2,8 @@
 
 echo "🚀 Memulai Instalasi Arch Cleaner..."
 
-# 1. Beri izin eksekusi ke script utama
 chmod +x arch-cleaner
 
-# 2. Pindahkan file utama ke /usr/local/bin (Folder Binaries User)
 echo "📂 Menyalin script ke sistem..."
 
 if [ -f "./arch-cleaner" ]; then
