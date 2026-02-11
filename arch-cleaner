@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# --- ARCH CLEANER TOOL ---
+# Author: Urzection
+# Description: TUI based system cleaner for Arch Linux
+# Dependencies: gum, pacman/paru/yay
+
+# 1. Deteksi AUR Helper (Prioritas: Paru > Yay > Pacman)
+if command -v paru &> /dev/null; then
+    HELPER="paru"
+elif command -v yay &> /dev/null; then
+    HELPER="yay"
+else
+    HELPER="sudo pacman"
+fi
+
+# 2. Cek apakah GUM terinstall? (Auto-install jika belum ada)
+if ! command -v gum &> /dev/null; then
+    echo "⚠️  Dependency 'gum' belum terinstall."
+    echo "   Tool ini butuh 'gum' untuk tampilan GUI-nya."
+    read -p ">> Install gum sekarang? (y/n) " choice
+    case "$choice" in 
+      y|Y ) $HELPER -S gum ;;
+      * ) echo "❌ Dibatalkan. Script tidak bisa jalan tanpa gum."; exit 1 ;;
+    esac
+fi
+
+# 3. Header Ganteng
+clear
+gum style \
+    --foreground 212 --border-foreground 212 --border double \
+    --align center --width 50 --margin "1 2" --padding "1 2" \
+    "ARCH CLEANER zect" "Helper: $HELPER"
+
+# 4. Menu Pilihan (Multi-select)
+SELECTED=$(gum choose --no-limit --cursor-prefix "○ " --selected-prefix "◉ " \
+    --header "Pilih yang mau dibersihkan (Spasi = Pilih, Enter = Gas):" \
+    "1. Hapus Paket Yatim (Orphans)" \
+    "2. Bersihkan Cache Pacman (Sisa Download)" \
+    "3. Pangkas Log System (Vacuum Journal)" \
+    "4. Bersihkan Cache User (~/.cache)" \
+    "5. Kosongkan Trash Bin")
+
+# Jika user tidak memilih apa-apa / Cancel
+if [ -z "$SELECTED" ]; then
+    gum style --foreground 196 "❌ Dibatalkan oleh user."
+    exit 0
+fi
+
+# 5. Eksekusi Pilihan
+echo "$SELECTED" | while read -r ITEM; do
+    case "$ITEM" in
+        "1. Hapus Paket Yatim"*)
+            gum style --foreground 212 ">> Menghapus Orphans..."
+            # Logic hapus orphan universal
+            if [ "$HELPER" = "sudo pacman" ]; then
+                sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "✅ Tidak ada orphans."
+            else
+                $HELPER -c || true
+            fi
+            ;;
+        
+        "2. Bersihkan Cache Pacman"*)
+            gum style --foreground 212 ">> Membersihkan Cache Pacman..."
+            # -Sc menghapus cache lama tapi menyisakan versi stabil terakhir
+            $HELPER -Sc
+            ;;
+        
+        "3. Pangkas Log System"*)
+            gum style --foreground 212 ">> Memangkas Journal Log..."
+            gum spin --title "Vacuuming logs (sisa 2 minggu)..." -- sudo journalctl --vacuum-time=2weeks
+            ;;
+        
+        "4. Bersihkan Cache User"*)
+            gum style --foreground 212 ">> Membersihkan ~/.cache..."
+            gum spin --title "Deleting user cache..." -- rm -rf ~/.cache/*
+            ;;
+        
+        "5. Kosongkan Trash Bin"*)
+            gum style --foreground 212 ">> Mengosongkan Trash..."
+            gum spin --title "Emptying trash..." -- rm -rf ~/.local/share/Trash/*
+            ;;
+    esac
+done
+
+# 6. Selesai
+gum style --foreground 46 --bold "✨ SIAP! Sistem Arch kamu sudah kinclong! ✨"
