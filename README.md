@@ -3,7 +3,7 @@
 A simple, beautiful TUI (Text User Interface) tool to clean up your Arch Linux system (Arch, CachyOS, Manjaro, EndeavourOS).
 Built with **Bash** and **Gum**.
 
-![Terminal](https://placehold.co/600x400?text=Screenshot+Here)
+![Tampilan Arch Cleaner](screenshots/20260211_094538.png)
 
 ## ✨ Features
 - 🗑️ **Remove Orphans**: Hapus dependensi yang tidak terpakai.
