@@ -15,8 +15,6 @@
 ## 👨‍💻 Author & Maintainer
 
 **Muhammad Adam Zaky Jiddyansah**
-*(System Administrator & Linux Automation Specialist)*
-
 > "Automation is not just about saving time; it's about reliability and precision in system management."
 > — **Muhammad Adam Zaky Jiddyansah**
 
