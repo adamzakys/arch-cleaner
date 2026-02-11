@@ -1,87 +1,196 @@
 #!/bin/bash
 
-# --- ARCH CLEANER TOOL ---
-# Author: Urzection
-# Description: TUI based system cleaner for Arch Linux
-# Dependencies: gum, pacman/paru/yay
+# ==============================================================================
+# ARCH MAINTENANCE HUB v6.2 (FIX: Infinite Loop / Flickering)
+# ==============================================================================
 
-# 1. Deteksi AUR Helper (Prioritas: Paru > Yay > Pacman)
-if command -v paru &> /dev/null; then
-    HELPER="paru"
-elif command -v yay &> /dev/null; then
-    HELPER="yay"
-else
-    HELPER="sudo pacman"
-fi
+# --- [ CONFIGURATION ] ---
+COLOR_PRI="4" # Blue
+COLOR_SEC="2" # Green
+COLOR_ERR="1" # Red
 
-# 2. Cek apakah GUM terinstall? (Auto-install jika belum ada)
-if ! command -v gum &> /dev/null; then
-    echo "⚠️  Dependency 'gum' belum terinstall."
-    echo "   Tool ini butuh 'gum' untuk tampilan GUI-nya."
-    read -p ">> Install gum sekarang? (y/n) " choice
-    case "$choice" in 
-      y|Y ) $HELPER -S gum ;;
-      * ) echo "❌ Dibatalkan. Script tidak bisa jalan tanpa gum."; exit 1 ;;
-    esac
-fi
+# --- [ SYSTEM CHECK ] ---
+HOSTNAME=$(cat /etc/hostname)
+KERNEL=$(uname -r)
 
-# 3. Header Ganteng
-clear
-gum style \
-    --foreground 212 --border-foreground 212 --border double \
-    --align center --width 50 --margin "1 2" --padding "1 2" \
-    "ARCH CLEANER zect" "Helper: $HELPER"
+# Detect Helper
+if command -v paru &> /dev/null; then HELPER="paru"
+elif command -v yay &> /dev/null; then HELPER="yay"
+else HELPER="sudo pacman"; fi
 
-# 4. Menu Pilihan (Multi-select)
-SELECTED=$(gum choose --no-limit --cursor-prefix "○ " --selected-prefix "◉ " \
-    --header "Pilih yang mau dibersihkan (Spasi = Pilih, Enter = Gas):" \
-    "1. Hapus Paket Yatim (Orphans)" \
-    "2. Bersihkan Cache Pacman (Sisa Download)" \
-    "3. Pangkas Log System (Vacuum Journal)" \
-    "4. Bersihkan Cache User (~/.cache)" \
-    "5. Kosongkan Trash Bin")
-
-# Jika user tidak memilih apa-apa / Cancel
-if [ -z "$SELECTED" ]; then
-    gum style --foreground 196 "❌ Dibatalkan oleh user."
-    exit 0
-fi
-
-# 5. Eksekusi Pilihan
-echo "$SELECTED" | while read -r ITEM; do
-    case "$ITEM" in
-        "1. Hapus Paket Yatim"*)
-            gum style --foreground 212 ">> Menghapus Orphans..."
-            # Logic hapus orphan universal
-            if [ "$HELPER" = "sudo pacman" ]; then
-                sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "✅ Tidak ada orphans."
-            else
-                $HELPER -c || true
-            fi
-            ;;
-        
-        "2. Bersihkan Cache Pacman"*)
-            gum style --foreground 212 ">> Membersihkan Cache Pacman..."
-            # -Sc menghapus cache lama tapi menyisakan versi stabil terakhir
-            $HELPER -Sc
-            ;;
-        
-        "3. Pangkas Log System"*)
-            gum style --foreground 212 ">> Memangkas Journal Log..."
-            gum spin --title "Vacuuming logs (sisa 2 minggu)..." -- sudo journalctl --vacuum-time=2weeks
-            ;;
-        
-        "4. Bersihkan Cache User"*)
-            gum style --foreground 212 ">> Membersihkan ~/.cache..."
-            gum spin --title "Deleting user cache..." -- rm -rf ~/.cache/*
-            ;;
-        
-        "5. Kosongkan Trash Bin"*)
-            gum style --foreground 212 ">> Mengosongkan Trash..."
-            gum spin --title "Emptying trash..." -- rm -rf ~/.local/share/Trash/*
-            ;;
-    esac
+# Ensure Dependencies
+for dep in gum bc; do
+    if ! command -v $dep &> /dev/null; then
+        echo "Installing core dependency: $dep..."
+        $HELPER -S $dep --noconfirm > /dev/null 2>&1
+    fi
 done
 
-# 6. Selesai
-gum style --foreground 46 --bold "✨ SIAP! Sistem Arch kamu sudah kinclong! ✨"
+# --- [ VISUAL FUNCTIONS ] ---
+
+get_bar() {
+    local percent=$1
+    local width=15
+    local fill=$(echo "$percent * $width / 100" | bc)
+    local empty=$((width - fill))
+    
+    local color=$COLOR_SEC
+    if [ "$percent" -ge 75 ]; then color="3"; fi
+    if [ "$percent" -ge 90 ]; then color=$COLOR_ERR; fi
+
+    local filled_bar=$(printf "■%.0s" $(seq 1 $fill))
+    local empty_bar=$(printf "□%.0s" $(seq 1 $empty))
+    
+    gum style --foreground "$color" "[$filled_bar$empty_bar]"
+}
+
+render_interface() {
+    clear
+    TERM_WIDTH=$(tput cols)
+    
+    # Gathering Data
+    UPTIME=$(uptime -p | sed 's/up //')
+    CPU_VAL=$(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}' | cut -d. -f1)
+    MEM_TOTAL=$(free -m | awk '/^Mem:/ {print $2}')
+    MEM_USED=$(free -m | awk '/^Mem:/ {print $3}')
+    MEM_PERC=$(( 100 * $MEM_USED / MEM_TOTAL ))
+    DISK_VAL=$(df / | awk 'NR==2 {print $5}' | tr -d '%')
+    
+    CPU_BAR=$(get_bar $CPU_VAL)
+    MEM_BAR=$(get_bar $MEM_PERC)
+    DISK_BAR=$(get_bar $DISK_VAL)
+
+    # Layout Logic
+    if [ "$TERM_WIDTH" -gt 70 ]; then
+        INFO_PANEL=$(gum style --width 32 --padding "0 1" --border rounded --border-foreground 8 \
+            "💻 HOST IDENTITY" \
+            "────────────────" \
+            "Hostname : $HOSTNAME" \
+            "Kernel   : $KERNEL" \
+            "Pkg Mgr  : $HELPER" \
+            "Runtime  : $UPTIME")
+
+        STATS_PANEL=$(gum style --width 32 --padding "0 1" --border rounded --border-foreground 8 \
+            "📊 TELEMETRY" \
+            "────────────────" \
+            "CPU Load  : $CPU_BAR" \
+            "RAM Usage : $MEM_BAR" \
+            "Disk Root : $DISK_BAR")
+
+        gum style --foreground $COLOR_PRI --border double --align center --width 66 --bold "SYSTEM CONTROL CENTER"
+        gum join --horizontal "$INFO_PANEL" "  " "$STATS_PANEL"
+    else
+        # Safe Mode Layout (Jika terminal sempit)
+        echo "SYSTEM CONTROL CENTER ($HOSTNAME)"
+        echo "CPU: $CPU_BAR  RAM: $MEM_BAR"
+        echo "---------------------------------"
+    fi
+}
+
+# --- [ MODULES ] ---
+
+mod_maintenance() {
+    gum style --foreground $COLOR_PRI "⚙ EXECUTING CORE MAINTENANCE..."
+    if [ "$HELPER" = "sudo pacman" ]; then
+        ORPHANS=$(pacman -Qtdq)
+        [ -n "$ORPHANS" ] && sudo pacman -Rns $ORPHANS
+    else
+        $HELPER -c || true
+    fi
+    $HELPER -Sc
+    sudo journalctl --vacuum-time=2weeks
+    rm -rf ~/.cache/*
+    gum style --foreground $COLOR_SEC "✔ Maintenance Complete."
+    sleep 1
+}
+
+mod_sandbox() {
+    gum style --foreground $COLOR_PRI "📦 SANDBOX MANAGER"
+    # Tambahkan < /dev/tty di sini juga untuk keamanan input
+    ACTION=$(gum choose "List Inventory" "Prune Runtimes" "Cancel" < /dev/tty)
+    
+    case "$ACTION" in
+        "List"*)
+            if command -v flatpak &>/dev/null; then
+                flatpak list --app --columns=name,size,version | gum table
+            else echo "Flatpak not found."; fi
+            read -r < /dev/tty ;;
+        "Prune"*)
+            [ -x "$(command -v flatpak)" ] && flatpak uninstall --unused -y
+            [ -x "$(command -v snap)" ] && sudo rm -rf /var/lib/snapd/cache/*
+            gum style --foreground $COLOR_SEC "✔ Done."; sleep 1 ;;
+    esac
+}
+
+mod_config() {
+    gum style --foreground $COLOR_PRI "🗑 CONFIG CLEANER"
+    cd "$HOME/.config" || return
+    DIRS=$(find . -maxdepth 1 -type d -not -name '.' | sed 's|^\./||' | sort)
+    
+    if [ -z "$DIRS" ]; then echo "Empty."; sleep 1; return; fi
+
+    TARGETS=$(echo "$DIRS" | gum choose --no-limit --height 10 --header "Select to DELETE:" < /dev/tty)
+    
+    if [ -n "$TARGETS" ]; then
+        if gum confirm "Confirm delete?" < /dev/tty; then
+            echo "$TARGETS" | while read -r DIR; do rm -rf "$HOME/.config/$DIR"; done
+            gum style --foreground $COLOR_SEC "✔ Deleted."
+        fi
+    fi
+    cd "$HOME"
+}
+
+mod_disk() {
+    gum style --foreground $COLOR_PRI "📊 DISK ANALYZER"
+    gum spin --title "Scanning..." -- find "$HOME" -type f -size +100M -not -path '*/.*' -exec du -ah {} + 2>/dev/null | sort -rh | head -n 10 > /tmp/bigfiles
+    
+    if [ -s /tmp/bigfiles ]; then
+        cat /tmp/bigfiles | gum table --columns "SIZE,PATH"
+        if gum confirm "Delete a file?" < /dev/tty; then
+            F=$(gum input --placeholder "Path to delete" < /dev/tty)
+            [ -f "$F" ] && rm "$F" && gum style --foreground $COLOR_SEC "✔ Deleted."
+        fi
+    else
+        echo "No large files."
+    fi
+    rm /tmp/bigfiles 2>/dev/null
+    # Paksa read dari TTY agar tidak skip otomatis
+    echo "Press Enter to continue..."
+    read -r < /dev/tty
+}
+
+# --- [ MAIN LOOP (FIXED) ] ---
+
+while true; do
+    render_interface
+    
+    echo ""
+    # PENTING: Menghapus flag formatting yang rumit sementara
+    # PENTING: Menambahkan < /dev/tty di akhir perintah gum choose
+    # Ini memaksa gum mengabaikan buffer sampah dan minta input baru user
+    
+    gum style --foreground 8 "Select Operation Module:"
+    
+    ACTION=$(gum choose \
+        "1. System Maintenance (Core)" \
+        "2. Sandbox Manager (Flatpak/Snap)" \
+        "3. Residual Config Cleaner" \
+        "4. Disk Usage Analyzer" \
+        "5. Exit Application" \
+        < /dev/tty) 
+
+    # Cek jika ACTION kosong (User tekan ESC atau Error)
+    if [ -z "$ACTION" ]; then
+        clear
+        echo "Exiting..."
+        exit 0
+    fi
+
+    case "$ACTION" in
+        "1."*) mod_maintenance ;;
+        "2."*) mod_sandbox ;;
+        "3."*) mod_config ;;
+        "4."*) mod_disk ;;
+        "5."*) clear; exit 0 ;;
+    esac
+done
