@@ -8,7 +8,7 @@
 **Enterprise-grade system maintenance dashboard and telemetry tool for Arch Linux, CachyOS, and Manjaro.**
 *Designed for stability, efficiency, and professional system administration.*
 
-![Arch Maintenance Hub TUI](screenshots/20260211_094538.png)
+![Arch Maintenance Hub TUI](screenshots/20260211_112210.png)
 
 ---
 
