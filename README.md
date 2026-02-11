@@ -18,7 +18,7 @@ Buka terminal, lalu jalankan perintah ini:
 
 ```bash
 # 1. Clone repository ini
-git clone [https://github.com/adamzakys/arch-cleaner.git](https://github.com/adamzakys/arch-cleaner.git)
+git clone https://github.com/adamzakys/arch-cleaner.git
 
 # 2. Masuk ke folder project
 cd arch-cleaner
