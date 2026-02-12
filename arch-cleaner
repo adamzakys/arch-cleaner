@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# ==============================================================================
-# ARCH MAINTENANCE HUB v6.2 (FIX: Infinite Loop / Flickering)
-# ==============================================================================
-
 # --- [ CONFIGURATION ] ---
 COLOR_PRI="4" # Blue
 COLOR_SEC="2" # Green
@@ -164,11 +160,7 @@ mod_disk() {
 while true; do
     render_interface
     
-    echo ""
-    # PENTING: Menghapus flag formatting yang rumit sementara
-    # PENTING: Menambahkan < /dev/tty di akhir perintah gum choose
-    # Ini memaksa gum mengabaikan buffer sampah dan minta input baru user
-    
+    echo ""    
     gum style --foreground 8 "Select Operation Module:"
     
     ACTION=$(gum choose \
