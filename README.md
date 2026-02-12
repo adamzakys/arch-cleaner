@@ -12,11 +12,8 @@
 
 ---
 
-## 👨‍💻 Author & Maintainer
-
-**Muhammad Adam Zaky Jiddyansah**
-> "Automation is not just about saving time; it's about reliability and precision in system management."
-> — **Muhammad Adam Zaky Jiddyansah**
+## 👨‍💻
+> — **Muhammad Adam Zaky Jiddyansah** 
 
 ---
 
